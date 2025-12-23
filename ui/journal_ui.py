@@ -131,6 +131,7 @@ def render_journal_form(user_id: str) -> None:
                 new_selection = sorted(list(set(current_selection + suggestions)))
                 st.session_state.selected_tags_widget = new_selection
                 st.toast(f"タグを提案しました: {', '.join(suggestions)}", icon="🤖")
+                st.rerun()  # multiselectに反映するため再描画
             else:
                 st.toast("提案できるタグが見つかりませんでした", icon="🤔")
         else:
