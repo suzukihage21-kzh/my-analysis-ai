@@ -74,7 +74,7 @@ def render_login_page(auth_manager: AuthManager):
     with col1:
         auth_url = auth_manager.get_auth_url()
         if auth_url:
-            st.link_button("Gooleでログイン", auth_url, type="primary")
+            st.link_button("Googleでログイン", auth_url, type="primary")
         else:
             st.error("認証設定が見つかりません。Secretsを設定してください。")
             st.info("ローカル開発の場合は .streamlit/secrets.toml を確認してください。")
