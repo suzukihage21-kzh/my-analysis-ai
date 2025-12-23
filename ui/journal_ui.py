@@ -272,138 +272,27 @@ def render_journal_history(user_id: str) -> None:
 
     # エントリー一覧
     for entry in entries:
-        is_editing = st.session_state.get("editing_entry_id") == entry.id
-        
         # エキスパンダーのラベル
         label = f"📅 {entry.date.strftime('%Y年%m月%d日')} - 気分: {'😃' if entry.emotion_score >= 7 else '😐' if entry.emotion_score >= 4 else '😔'} ({entry.emotion_score}/10)"
-        if is_editing:
-            label = f"📝 編集中: {label}"
             
-        with st.expander(label, expanded=is_editing):
+        with st.expander(label):
+            # --- 表示内容 ---
+            st.markdown(entry.content)
+
+            if entry.tags:
+                tag_str = " ".join([f"`{tag}`" for tag in entry.tags])
+                st.markdown(f"🏷️ {tag_str}")
+
+            if entry.personality_type:
+                st.caption(f"タイプ: {entry.personality_type}")
             
-            if is_editing:
-                # --- 編集モード ---
-                # フォーム外でタグ提案ボタンを配置（フォームの前に）
-                
-                # セッション状態キーを動的に生成
-                
-                # セッション状態キーを動的に生成
-                suggest_key = f"suggest_tags_edit_{entry.id}"
-                content_key = f"temp_content_{entry.id}"
-                suggested_tags_key = f"suggested_tags_{entry.id}"
-                
-                # 現在の本文を一時保存（提案ボタン用）
-                if content_key not in st.session_state:
-                    st.session_state[content_key] = entry.content
-                
-                # 提案されたタグを保持
-                if suggested_tags_key not in st.session_state:
-                    st.session_state[suggested_tags_key] = []
-                
-                if st.button("🤖 本文からタグを自動提案", key=suggest_key, help="入力された本文を解析してタグを提案します"):
-                    temp_content = st.session_state.get(content_key, entry.content)
-                    if temp_content:
-                        suggestions = suggest_tags(temp_content, existing_tags)
-                        if suggestions:
-                            st.session_state[suggested_tags_key] = suggestions
-                            st.toast(f"タグを提案しました: {', '.join(suggestions)}", icon="🤖")
-                            st.rerun()  # フォームを再描画して提案タグを反映
-                        else:
-                            st.toast("提案できるタグが見つかりませんでした", icon="🤔")
-                    else:
-                        st.toast("先に本文を入力してください", icon="⚠️")
-                
-                with st.form(key=f"edit_form_{entry.id}"):
-                    # 本文編集
-                    new_content = st.text_area("本文", value=entry.content, height=150, key=f"edit_content_{entry.id}")
-                    
-                    # 本文の変更をセッション状態に反映（次回の提案用）
-                    st.session_state[content_key] = new_content
-                    
-                    # 気分編集
-                    new_emotion = st.slider(
-                        "気分", min_value=1, max_value=10, value=entry.emotion_score
-                    )
-                    
-                    # タグ編集（既存タグの選択）
-                    current_tags = [t for t in entry.tags if t in existing_tags]
-                    # 提案されたタグを追加
-                    suggested = st.session_state.get(suggested_tags_key, [])
-                    if suggested:
-                        current_tags = sorted(list(set(current_tags + suggested)))
-                    
-                    custom_tags_val = ", ".join([t for t in entry.tags if t not in existing_tags])
-                    
-                    col_tag1, col_tag2 = st.columns(2)
-                    with col_tag1:
-                        new_selected_tags = st.multiselect(
-                            "既存タグ", existing_tags, default=current_tags
-                        )
-                    with col_tag2:
-                        new_custom_tags_str = st.text_input(
-                            "新規タグ（カンマ区切り）", value=custom_tags_val
-                        )
-                    
-                    col_btn1, col_btn2 = st.columns([1, 1])
-                    with col_btn1:
-                         if st.form_submit_button("💾 保存", type="primary", use_container_width=True):
-                            # タグの結合
-                            final_tags = list(new_selected_tags)
-                            if new_custom_tags_str:
-                                extra_tags = [t.strip() for t in new_custom_tags_str.split(",") if t.strip()]
-                                final_tags.extend(extra_tags)
-                            final_tags = sorted(list(set(final_tags)))
-                            
-                            # 更新オブジェクト
-                            updated_entry = JournalEntry(
-                                id=entry.id,
-                                user_id=entry.user_id,
-                                date=entry.date, # 日付は変更しない
-                                content=new_content,
-                                tags=final_tags,
-                                emotion_score=new_emotion,
-                                personality_type=entry.personality_type
-                            )
-                            
-                            if update_journal_entry(updated_entry):
-                                st.session_state.editing_entry_id = None
-                                st.success("更新しました！")
-                                st.rerun()
-                            else:
-                                st.error("更新に失敗しました")
-                                
-                    with col_btn2:
-                        # フォーム内でのキャンセルは難しい（submitボタンしかイベント発火しないため）
-                        # フォーム外に設置するか、submitボタンの一つとして実装しstateで分岐する
-                        # ここでは「キャンセル」ボタンもsubmit扱いにして、処理せずにstate戻す
-                        if st.form_submit_button("❌ キャンセル", use_container_width=True):
-                            st.session_state.editing_entry_id = None
-                            st.rerun()
-
-            else:
-                # --- 表示モード ---
-                st.markdown(entry.content)
-
-                if entry.tags:
-                    tag_str = " ".join([f"`{tag}`" for tag in entry.tags])
-                    st.markdown(f"🏷️ {tag_str}")
-
-                if entry.personality_type:
-                    st.caption(f"タイプ: {entry.personality_type}")
-                
-                # 操作ボタンエリア
-                col_op1, col_op2 = st.columns([1, 4])
-                with col_op1:
-                    if st.button("✏️ 編集", key=f"edit_btn_{entry.id}"):
-                        st.session_state.editing_entry_id = entry.id
-                        st.rerun()
-                with col_op2:
-                    if st.button("🗑️ 削除", key=f"del_{entry.id}"):
-                        if delete_journal_entry(entry.id):
-                            st.success("エントリーを削除しました")
-                            st.rerun()
-                        else:
-                            st.error("削除に失敗しました")
+            # 操作ボタンエリア（編集機能は削除）
+            if st.button("🗑️ 削除", key=f"del_{entry.id}"):
+                if delete_journal_entry(entry.id):
+                    st.success("エントリーを削除しました")
+                    st.rerun()
+                else:
+                    st.error("削除に失敗しました")
 
 
 def render_emotion_chart(entries: list[JournalEntry]) -> None:
