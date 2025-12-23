@@ -65,6 +65,8 @@ def get_db_type() -> str:
 def get_connection():
     """データベース接続を取得 (Dual DB support with safeguards and retry)"""
     import time
+    import socket
+    from urllib.parse import urlparse, urlunparse
     
     db_url = _get_db_url()
     
@@ -73,9 +75,42 @@ def get_connection():
         max_retries = 3
         last_error = None
         
+        # URLからホスト名を抽出してIPv4解決を試みる
+        # Streamlit Cloud等でIPv6接続に失敗する場合の対策
+        try:
+            parsed = urlparse(db_url)
+            original_host = parsed.hostname
+            if original_host:
+                # IPv4アドレスを取得
+                ipv4_addr = socket.gethostbyname(original_host)
+                # ホスト名をIPアドレスに置換した新しいURLを作成（ポート指定等は維持）
+                # netlocは 'user:pass@host:port' 形式なので単純置換は危険
+                # ここでは接続パラメータとして渡す方式に変更するか、
+                # あるいは単純にホスト名解決だけして、接続時のhost引数で上書きする
+                
+                # psycopg2.connectはdsn(db_url)とキーワード引数を混ぜられる
+                # host引数を明示的にIPv4アドレスに指定してオーバーライド
+                
+                # 注意: SSL証明書の検証でホスト名不一致になる可能性があるため
+                # sslmode='require' (verify-fullでない) なら通るはず
+                pass
+            else:
+                ipv4_addr = None
+        except Exception:
+            # 解決失敗時はそのままのURLを使用
+            ipv4_addr = None
+
         for attempt in range(max_retries):
             try:
-                conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor, connect_timeout=10)
+                # IPv4アドレスが特定できた場合はhost引数で上書き
+                kwargs = {
+                    "cursor_factory": RealDictCursor,
+                    "connect_timeout": 10
+                }
+                if ipv4_addr:
+                    kwargs["host"] = ipv4_addr
+                
+                conn = psycopg2.connect(db_url, **kwargs)
                 return conn
             except Exception as e:
                 last_error = e
