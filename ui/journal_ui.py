@@ -305,6 +305,7 @@ def render_journal_history(user_id: str) -> None:
                         if suggestions:
                             st.session_state[suggested_tags_key] = suggestions
                             st.toast(f"タグを提案しました: {', '.join(suggestions)}", icon="🤖")
+                            st.rerun()  # フォームを再描画して提案タグを反映
                         else:
                             st.toast("提案できるタグが見つかりませんでした", icon="🤔")
                     else:
