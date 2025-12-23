@@ -31,6 +31,17 @@ from models.data_models import (
 DB_PATH = Path(__file__).parent.parent / "self_analysis.db"
 
 
+def _parse_datetime(value: str | datetime) -> datetime:
+    """
+    日付値をdatetimeに変換（PostgreSQL/SQLite両対応）
+    PostgreSQLはdatetimeオブジェクトを直接返すが、
+    SQLiteは文字列を返すため、両方に対応する。
+    """
+    if isinstance(value, datetime):
+        return value
+    return datetime.fromisoformat(value)
+
+
 def _get_db_url() -> Optional[str]:
     """
     データベースURLを取得 (PostgreSQL)
@@ -358,7 +369,7 @@ def get_latest_personality(user_id: str) -> Optional[PersonalityResult]:
         user_id=row["user_id"],
         personality_type=row["personality_type"],
         dimension_scores=dimension_scores,
-        diagnosed_at=datetime.fromisoformat(row["diagnosed_at"]),
+        diagnosed_at=_parse_datetime(row["diagnosed_at"]),
     )
 
 
@@ -435,7 +446,7 @@ def get_journal_entries(
             JournalEntry(
                 id=row["id"],
                 user_id=row["user_id"],
-                date=datetime.fromisoformat(row["date"]),
+                date=_parse_datetime(row["date"]),
                 content=row["content"],
                 tags=json.loads(row["tags"]),
                 emotion_score=row["emotion_score"],
@@ -493,7 +504,7 @@ def get_all_personality_results(user_id: str) -> list[PersonalityResult]:
                 user_id=row["user_id"],
                 personality_type=row["personality_type"],
                 dimension_scores=dimension_scores,
-                diagnosed_at=datetime.fromisoformat(row["diagnosed_at"]),
+                diagnosed_at=_parse_datetime(row["diagnosed_at"]),
             )
         )
 
@@ -674,7 +685,7 @@ def get_latest_ai_analysis(user_id: str) -> dict | None:
         "growth_areas": json.loads(row["growth_areas"]),
         "actionable_advice": json.loads(row["actionable_advice"]),
         "overall_summary": row["overall_summary"],
-        "analyzed_at": datetime.fromisoformat(row["analyzed_at"]),
+        "analyzed_at": _parse_datetime(row["analyzed_at"]),
     }
 
 
@@ -755,7 +766,7 @@ def get_dynamic_profile(user_id: str) -> Optional[DynamicTypeProfile]:
         validated_strengths=json.loads(row["validated_strengths"]),
         observed_challenges=json.loads(row["observed_challenges"]),
         estimated_axis_scores=estimated_axis_scores,
-        last_updated=datetime.fromisoformat(row["last_updated"]),
+        last_updated=_parse_datetime(row["last_updated"]),
     )
 
 
@@ -800,7 +811,7 @@ def get_all_ai_analyses(user_id: str, limit: int = 10) -> list[dict]:
             "growth_areas": json.loads(row["growth_areas"]),
             "actionable_advice": json.loads(row["actionable_advice"]),
             "overall_summary": row["overall_summary"],
-            "analyzed_at": datetime.fromisoformat(row["analyzed_at"]),
+            "analyzed_at": _parse_datetime(row["analyzed_at"]),
         })
 
     return results
