@@ -66,7 +66,7 @@ def get_connection():
     """データベース接続を取得 (Dual DB support with safeguards and retry)"""
     import time
     import socket
-    from urllib.parse import urlparse, urlunparse
+    from urllib.parse import urlparse, unquote
     
     db_url = _get_db_url()
     
@@ -75,42 +75,51 @@ def get_connection():
         max_retries = 3
         last_error = None
         
-        # URLからホスト名を抽出してIPv4解決を試みる
-        # Streamlit Cloud等でIPv6接続に失敗する場合の対策
+        # URLを完全にパースして個別パラメータとして渡す
+        # psycopg2にDSN文字列を渡すとIPv6が使われる問題を回避
         try:
             parsed = urlparse(db_url)
             original_host = parsed.hostname
+            port = parsed.port or 5432
+            user = unquote(parsed.username) if parsed.username else None
+            password = unquote(parsed.password) if parsed.password else None
+            dbname = parsed.path.lstrip('/') if parsed.path else 'postgres'
+            
+            # IPv4アドレスを取得（IPv6問題回避）
             if original_host:
-                # IPv4アドレスを取得
-                ipv4_addr = socket.gethostbyname(original_host)
-                # ホスト名をIPアドレスに置換した新しいURLを作成（ポート指定等は維持）
-                # netlocは 'user:pass@host:port' 形式なので単純置換は危険
-                # ここでは接続パラメータとして渡す方式に変更するか、
-                # あるいは単純にホスト名解決だけして、接続時のhost引数で上書きする
-                
-                # psycopg2.connectはdsn(db_url)とキーワード引数を混ぜられる
-                # host引数を明示的にIPv4アドレスに指定してオーバーライド
-                
-                # 注意: SSL証明書の検証でホスト名不一致になる可能性があるため
-                # sslmode='require' (verify-fullでない) なら通るはず
-                pass
+                try:
+                    ipv4_addr = socket.gethostbyname(original_host)
+                except socket.gaierror:
+                    ipv4_addr = original_host  # 解決失敗時は元のホスト名
             else:
-                ipv4_addr = None
-        except Exception:
-            # 解決失敗時はそのままのURLを使用
+                ipv4_addr = original_host
+                
+        except Exception as parse_error:
+            # パース失敗時はそのままDSNを使用（フォールバック）
             ipv4_addr = None
+            original_host = None
 
         for attempt in range(max_retries):
             try:
-                # IPv4アドレスが特定できた場合はhost引数で上書き
-                kwargs = {
-                    "cursor_factory": RealDictCursor,
-                    "connect_timeout": 10
-                }
-                if ipv4_addr:
-                    kwargs["host"] = ipv4_addr
-                
-                conn = psycopg2.connect(db_url, **kwargs)
+                if ipv4_addr and user:
+                    # 個別パラメータで接続（IPv4強制）
+                    conn = psycopg2.connect(
+                        host=ipv4_addr,
+                        port=port,
+                        user=user,
+                        password=password,
+                        dbname=dbname,
+                        cursor_factory=RealDictCursor,
+                        connect_timeout=10,
+                        sslmode='require'
+                    )
+                else:
+                    # フォールバック：元のDSNで接続
+                    conn = psycopg2.connect(
+                        db_url,
+                        cursor_factory=RealDictCursor,
+                        connect_timeout=10
+                    )
                 return conn
             except Exception as e:
                 last_error = e
