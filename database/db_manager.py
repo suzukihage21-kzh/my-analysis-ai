@@ -46,11 +46,11 @@ def _get_db_url() -> Optional[str]:
 
 def is_cloud_environment() -> bool:
     """Streamlit Cloud環境かどうかを判定"""
-    # Streamlit CloudではSTREAMLIT環境変数またはSecretsが存在
+    # Streamlit Cloudでは特定の環境変数が設定される
     return (
         os.getenv("STREAMLIT_SHARING_MODE") is not None or
         os.getenv("STREAMLIT_RUNTIME_ENV") is not None or
-        (hasattr(st, "secrets") and len(st.secrets) > 0)
+        os.getenv("HOME", "").startswith("/home/appuser")  # Streamlit Cloudのデフォルトホーム
     )
 
 
@@ -63,23 +63,34 @@ def get_db_type() -> str:
 
 
 def get_connection():
-    """データベース接続を取得 (Dual DB support with safeguards)"""
+    """データベース接続を取得 (Dual DB support with safeguards and retry)"""
+    import time
+    
     db_url = _get_db_url()
     
     if db_url and psycopg2:
-        # PostgreSQL (Cloud)
-        try:
-            conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor)
-            return conn
-        except Exception as e:
-            if is_cloud_environment():
-                # クラウド環境ではフォールバックせずエラー
-                raise ConnectionError(
-                    f"PostgreSQLへの接続に失敗しました。データが永続化されません。: {e}"
-                )
-            else:
-                # ローカル開発ではフォールバックを許可
-                print(f"PostgreSQL connection failed: {e}. Falling back to SQLite.")
+        # PostgreSQL (Cloud) - リトライロジック付き
+        max_retries = 3
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor, connect_timeout=10)
+                return conn
+            except Exception as e:
+                last_error = e
+                if attempt < max_retries - 1:
+                    time.sleep(1)  # 1秒待ってリトライ
+                    continue
+        
+        # 全リトライ失敗
+        if is_cloud_environment():
+            raise ConnectionError(
+                f"PostgreSQLへの接続に失敗しました（{max_retries}回リトライ後）。: {last_error}"
+            )
+        else:
+            # ローカル開発ではフォールバックを許可
+            print(f"PostgreSQL connection failed: {last_error}. Falling back to SQLite.")
     
     # クラウド環境でDB URLがない場合はエラー
     if is_cloud_environment() and not db_url:
