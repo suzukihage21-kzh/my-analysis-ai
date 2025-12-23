@@ -282,9 +282,40 @@ def render_journal_history(user_id: str) -> None:
             
             if is_editing:
                 # --- 編集モード ---
+                # フォーム外でタグ提案ボタンを配置（フォームの前に）
+                st.markdown("🏷️ **タグ設定**")
+                
+                # セッション状態キーを動的に生成
+                suggest_key = f"suggest_tags_edit_{entry.id}"
+                content_key = f"temp_content_{entry.id}"
+                suggested_tags_key = f"suggested_tags_{entry.id}"
+                
+                # 現在の本文を一時保存（提案ボタン用）
+                if content_key not in st.session_state:
+                    st.session_state[content_key] = entry.content
+                
+                # 提案されたタグを保持
+                if suggested_tags_key not in st.session_state:
+                    st.session_state[suggested_tags_key] = []
+                
+                if st.button("🤖 本文からタグを自動提案", key=suggest_key, help="入力された本文を解析してタグを提案します"):
+                    temp_content = st.session_state.get(content_key, entry.content)
+                    if temp_content:
+                        suggestions = suggest_tags(temp_content, existing_tags)
+                        if suggestions:
+                            st.session_state[suggested_tags_key] = suggestions
+                            st.toast(f"タグを提案しました: {', '.join(suggestions)}", icon="🤖")
+                        else:
+                            st.toast("提案できるタグが見つかりませんでした", icon="🤔")
+                    else:
+                        st.toast("先に本文を入力してください", icon="⚠️")
+                
                 with st.form(key=f"edit_form_{entry.id}"):
                     # 本文編集
-                    new_content = st.text_area("本文", value=entry.content, height=150)
+                    new_content = st.text_area("本文", value=entry.content, height=150, key=f"edit_content_{entry.id}")
+                    
+                    # 本文の変更をセッション状態に反映（次回の提案用）
+                    st.session_state[content_key] = new_content
                     
                     # 気分編集
                     new_emotion = st.slider(
@@ -293,6 +324,11 @@ def render_journal_history(user_id: str) -> None:
                     
                     # タグ編集（既存タグの選択）
                     current_tags = [t for t in entry.tags if t in existing_tags]
+                    # 提案されたタグを追加
+                    suggested = st.session_state.get(suggested_tags_key, [])
+                    if suggested:
+                        current_tags = sorted(list(set(current_tags + suggested)))
+                    
                     custom_tags_val = ", ".join([t for t in entry.tags if t not in existing_tags])
                     
                     col_tag1, col_tag2 = st.columns(2)
