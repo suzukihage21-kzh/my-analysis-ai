@@ -31,11 +31,32 @@ from logic.ai_analyzer import (
     generate_comprehensive_profile,
 )
 from models.data_models import PersonalityResult
+from ui.styles import get_hero_card, get_section_header, get_info_banner, get_metric_card
 
 
 def render_analysis_page() -> None:
     """分析画面をレンダリング"""
-    st.title("🔍 分析・インサイト")
+    # ページヘッダー
+    st.markdown("""
+    <div style="
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    ">
+        <div style="font-size: 2.5rem;">🔍</div>
+        <div>
+            <h1 style="
+                margin: 0;
+                font-size: 2rem;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            ">分析・インサイト</h1>
+            <p style="margin: 0; color: #718096; font-size: 0.9rem;">あなたの性格と行動パターンを深く分析</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     user_id = st.session_state.get("user_id", "default_user")
 
@@ -43,10 +64,29 @@ def render_analysis_page() -> None:
     personality = get_latest_personality(user_id)
 
     if personality is None:
-        st.warning("まだ性格診断を受けていません。")
-        if st.button("🔮 診断を受ける", type="primary"):
-            st.session_state.current_view = "diagnostic"
-            st.rerun()
+        st.markdown("""
+        <div style="
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+        ">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🔮</div>
+            <div style="color: #e2e8f0; font-size: 1.1rem; margin-bottom: 0.5rem;">
+                まだ性格診断を受けていません
+            </div>
+            <div style="color: #718096; font-size: 0.9rem; margin-bottom: 1.5rem;">
+                分析を開始するには、まず性格診断を受けてください
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col_btn = st.columns([1, 2, 1])
+        with col_btn[1]:
+            if st.button("🔮 診断を受ける", type="primary", use_container_width=True):
+                st.session_state.current_view = "diagnostic"
+                st.rerun()
         return
 
     # タブで分析内容を分ける（AI分析とタイプ詳細を統合）
@@ -64,26 +104,47 @@ def render_analysis_page() -> None:
 
 def render_unified_analysis(user_id: str, personality: PersonalityResult) -> None:
     """統合された分析画面をレンダリング"""
-    st.markdown("## 📊 総合分析レポート")
-    
-    st.markdown("""
-    あなたのジャーナル履歴と性格診断結果を統合し、
-    AIが「現在のあなた」を深く分析します。
-    """)
+    # セクションヘッダー
+    st.markdown(get_section_header(
+        "📊",
+        "総合分析レポート",
+        "ジャーナル履歴と性格診断結果を統合し、AIが「現在のあなた」を深く分析します"
+    ), unsafe_allow_html=True)
     
     # API設定状況を確認
     if not is_api_configured():
-        st.warning("⚠️ Google Gemini APIキーの設定が必要です")
+        st.markdown(get_info_banner(
+            "⚠️",
+            "API設定が必要です",
+            "Google Gemini APIキーを設定すると、AI分析機能を利用できます",
+            "#f59e0b"
+        ), unsafe_allow_html=True)
         return
     
     # ジャーナルを取得
     journals = get_journal_entries(user_id, limit=50)
     
     if not journals:
-        st.info("📝 分析を行うには、まずジャーナルを書いてください。")
-        if st.button("📝 ジャーナルを書く", key="write_journal_ai"):
-            st.session_state.current_view = "journal"
-            st.rerun()
+        st.markdown("""
+        <div style="
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+        ">
+            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📝</div>
+            <div style="color: #e2e8f0; font-size: 1rem; margin-bottom: 0.5rem;">
+                分析を行うには、まずジャーナルを書いてください
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col_btn = st.columns([1, 2, 1])
+        with col_btn[1]:
+            if st.button("📝 ジャーナルを書く", key="write_journal_ai", use_container_width=True):
+                st.session_state.current_view = "journal"
+                st.rerun()
         return
     
     # セッション状態で分析結果を管理
@@ -93,7 +154,27 @@ def render_unified_analysis(user_id: str, personality: PersonalityResult) -> Non
         st.session_state.ai_analysis_error = None
     
     # 分析実行エリア
-    st.info(f"✅ {len(journals)}件のジャーナルをもとに分析します")
+    st.markdown(f"""
+    <div style="
+        background: linear-gradient(135deg, rgba(56, 239, 125, 0.1) 0%, rgba(17, 153, 142, 0.1) 100%);
+        border: 1px solid rgba(56, 239, 125, 0.2);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    ">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="font-size: 1.25rem;">✅</div>
+            <div>
+                <div style="color: #e2e8f0; font-weight: 500;">{len(journals)}件のジャーナルをもとに分析</div>
+                <div style="color: #a0aec0; font-size: 0.8rem;">最新のデータで深層分析を実行できます</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     
     if st.button("🚀 最新の状態で分析を実行", type="primary", use_container_width=True):
         with st.spinner("AIが分析中です...（ジャーナル量により30秒〜1分程度かかります）"):
@@ -438,16 +519,37 @@ def render_journal_summary(user_id: str) -> None:
     import pandas as pd
     from collections import Counter
 
-    st.markdown("## 📚 ジャーナル記録・要約")
+    # セクションヘッダー
+    st.markdown(get_section_header(
+        "📚",
+        "ジャーナル記録・要約",
+        "あなたの記録の全体像を可視化"
+    ), unsafe_allow_html=True)
 
     # 全ジャーナルを取得（limitを大きく設定）
     entries = get_journal_entries(user_id, limit=1000)
 
     if not entries:
-        st.info("まだジャーナルエントリーがありません。")
-        if st.button("📝 最初のエントリーを書く", type="primary", key="write_first_journal"):
-            st.session_state.current_view = "journal"
-            st.rerun()
+        st.markdown("""
+        <div style="
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+        ">
+            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📝</div>
+            <div style="color: #e2e8f0; font-size: 1rem; margin-bottom: 0.5rem;">
+                まだジャーナルエントリーがありません
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col_btn = st.columns([1, 2, 1])
+        with col_btn[1]:
+            if st.button("📝 最初のエントリーを書く", type="primary", key="write_first_journal", use_container_width=True):
+                st.session_state.current_view = "journal"
+                st.rerun()
         return
 
     # DataFrame作成
@@ -467,25 +569,27 @@ def render_journal_summary(user_id: str) -> None:
     daily_df["date"] = pd.to_datetime(daily_df["date"])
 
     # --- 統計情報 ---
+    avg_emotion = df["emotion"].mean()
+    first_date = df["date"].min().date()
+    days_since = (pd.Timestamp.now().date() - first_date).days + 1
+    total_chars = df["length"].sum()
+    
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.metric("総エントリー数", f"{len(entries)}件")
+        st.markdown(get_metric_card("📝", "総エントリー数", f"{len(entries)}件"), unsafe_allow_html=True)
     
     with col2:
-        avg_emotion = df["emotion"].mean()
-        st.metric("平均気分スコア", f"{avg_emotion:.1f} / 10")
+        st.markdown(get_metric_card("😊", "平均気分スコア", f"{avg_emotion:.1f}/10", "#38ef7d"), unsafe_allow_html=True)
     
     with col3:
-        first_date = df["date"].min().date()
-        days_since = (pd.Timestamp.now().date() - first_date).days + 1
-        st.metric("記録期間", f"{days_since}日間")
+        st.markdown(get_metric_card("📅", "記録期間", f"{days_since}日間", "#4facfe"), unsafe_allow_html=True)
 
     with col4:
-        total_chars = df["length"].sum()
-        st.metric("総文字数", f"{total_chars}文字")
+        st.markdown(get_metric_card("✍️", "総文字数", f"{total_chars:,}文字", "#f093fb"), unsafe_allow_html=True)
 
-    st.markdown("---")
+    st.markdown("<div style='margin: 1.5rem 0;'></div>", unsafe_allow_html=True)
+
 
     # --- 可視化 ---
     col_chart1, col_chart2 = st.columns(2)

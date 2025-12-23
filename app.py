@@ -11,6 +11,7 @@ from database.db_manager import init_database
 from ui.diagnostic_ui import render_diagnostic_page
 from ui.journal_ui import render_journal_page
 from ui.analysis_ui import render_analysis_page
+from ui.styles import inject_custom_css, get_hero_card, get_feature_card
 
 
 # ページ設定
@@ -20,6 +21,9 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# グローバルスタイルを注入
+inject_custom_css()
 
 
 def init_app() -> None:
@@ -65,86 +69,187 @@ def init_app() -> None:
                 st.query_params.clear()
 
 
-def render_login_page(auth_manager: AuthManager):
+def render_login_page(auth_manager: AuthManager) -> None:
     """ログイン画面を描画"""
-    st.title("🔐 自己分析アプリにログイン")
-    st.markdown("自分だけのデータを安全に管理するために、Googleアカウントでログインしてください。")
+    # ヒーローセクション
+    st.markdown(get_hero_card(
+        title="自己分析アプリ",
+        subtitle="性格診断とジャーナリングで、あなた自身をもっと深く理解しよう",
+        icon="🔮"
+    ), unsafe_allow_html=True)
     
-    col1, col2 = st.columns([1, 2])
+    # メリットカード
+    col1, col2, col3 = st.columns(3)
     with col1:
-        auth_url = auth_manager.get_auth_url()
-        if auth_url:
-            st.link_button("Googleでログイン", auth_url, type="primary")
-        else:
-            st.error("認証設定が見つかりません。Secretsを設定してください。")
-            st.info("ローカル開発の場合は .streamlit/secrets.toml を確認してください。")
-
+        st.markdown(get_feature_card(
+            icon="📱",
+            title="どの端末からでも",
+            description="スマホ・PC・タブレット、どこからでもアクセス可能"
+        ), unsafe_allow_html=True)
     with col2:
-        st.markdown("""
-        **ログインするメリット**:
-        - 📱 どの端末からでもアクセス可能
-        - 🔒 データが消えずに永続化
-        - 🤖 あなただけのAI分析モデル
-        """)
+        st.markdown(get_feature_card(
+            icon="🔒",
+            title="安全なデータ保護",
+            description="あなたのデータは暗号化され、永続的に保存"
+        ), unsafe_allow_html=True)
+    with col3:
+        st.markdown(get_feature_card(
+            icon="🤖",
+            title="AIパーソナル分析",
+            description="あなただけのカスタマイズされたAI分析を提供"
+        ), unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # ログインボタン
+    auth_url = auth_manager.get_auth_url()
+    if auth_url:
+        col_btn = st.columns([1, 2, 1])
+        with col_btn[1]:
+            st.link_button(
+                "🚀 Googleでログインして始める",
+                auth_url,
+                type="primary",
+                use_container_width=True
+            )
+    else:
+        st.error("⚠️ 認証設定が見つかりません。Secretsを設定してください。")
+        st.info("ローカル開発の場合は `.streamlit/secrets.toml` を確認してください。")
 
 
 
 def render_sidebar() -> str:
     """サイドバーをレンダリングして選択されたビューを返す"""
     with st.sidebar:
-        st.title("🔮 自己分析アプリ")
+        # ロゴ/タイトル
+        st.markdown("""
+        <div style="
+            text-align: center;
+            padding: 1rem 0;
+            margin-bottom: 1rem;
+        ">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔮</div>
+            <div style="
+                font-size: 1.25rem;
+                font-weight: 700;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            ">自己分析アプリ</div>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # ユーザー情報表示
+        # ユーザー情報カード
         if st.session_state.user_info:
-            st.caption(f"Login: {st.session_state.user_info.get('name')}")
-            if st.button("ログアウト"):
+            user_name = st.session_state.user_info.get('name', 'ユーザー')
+            st.markdown(f"""
+            <div style="
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+                padding: 0.75rem 1rem;
+                margin-bottom: 1rem;
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+            ">
+                <div style="
+                    width: 36px;
+                    height: 36px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1rem;
+                ">👤</div>
+                <div>
+                    <div style="font-size: 0.75rem; color: #718096;">ログイン中</div>
+                    <div style="font-size: 0.9rem; color: #e2e8f0; font-weight: 500;">{user_name}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button("🚪 ログアウト", use_container_width=True):
                 st.session_state.user_id = None
                 st.session_state.user_info = None
                 st.rerun()
-        
+
         st.markdown("---")
 
         # ナビゲーション
-        st.markdown("### 📍 ナビゲーション")
-
-        if st.button("🔮 性格診断", use_container_width=True):
-            st.session_state.current_view = "diagnostic"
-            st.rerun()
-
-        if st.button("📝 ジャーナル", use_container_width=True):
-            st.session_state.current_view = "journal"
-            st.rerun()
-
-        if st.button("🔍 分析", use_container_width=True):
-            st.session_state.current_view = "analysis"
-            st.rerun()
+        current_view = st.session_state.current_view
+        
+        nav_items = [
+            ("diagnostic", "🔮", "性格診断"),
+            ("journal", "📝", "ジャーナル"),
+            ("analysis", "🔍", "分析"),
+        ]
+        
+        for view_id, icon, label in nav_items:
+            is_active = current_view == view_id
+            btn_label = f"{icon} {label}"
+            
+            if is_active:
+                # アクティブ状態の強調表示
+                st.markdown(f"""
+                <div style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border-radius: 12px;
+                    padding: 0.75rem 1rem;
+                    margin-bottom: 0.5rem;
+                    font-weight: 600;
+                    color: white;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                ">
+                    <span>{icon}</span>
+                    <span>{label}</span>
+                    <span style="margin-left: auto; font-size: 0.75rem;">●</span>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                if st.button(btn_label, key=f"nav_{view_id}", use_container_width=True):
+                    st.session_state.current_view = view_id
+                    st.rerun()
 
         st.markdown("---")
 
-        # アプリ情報
-        st.markdown("### ℹ️ このアプリについて")
+        # アプリ情報（コンパクト版）
         st.markdown("""
-        このアプリは、性格診断と日々のジャーナリングを通じて
-        自己理解を深めるためのツールです。
-
-        **機能**:
-        - 30問の性格診断
-        - パーソナライズされたジャーナル
-        - 盲点・行動パターンの分析
-        """)
-
-        st.markdown("---")
-
-        # 現在のビューを表示
-        view_names = {
-            "diagnostic": "🔮 性格診断",
-            "journal": "📝 ジャーナル",
-            "analysis": "🔍 分析",
-        }
-        current = view_names.get(st.session_state.current_view, "不明")
-        st.info(f"現在の画面: {current}")
+        <div style="
+            font-size: 0.8rem;
+            color: #718096;
+            text-align: center;
+            padding: 0.5rem;
+        ">
+            <div style="margin-bottom: 0.5rem;">💡 機能一覧</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.25rem; justify-content: center;">
+                <span style="
+                    background: rgba(255,255,255,0.05);
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 6px;
+                    font-size: 0.7rem;
+                ">性格診断</span>
+                <span style="
+                    background: rgba(255,255,255,0.05);
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 6px;
+                    font-size: 0.7rem;
+                ">ジャーナル</span>
+                <span style="
+                    background: rgba(255,255,255,0.05);
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 6px;
+                    font-size: 0.7rem;
+                ">AI分析</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     return st.session_state.current_view
+
 
 
 def main() -> None:

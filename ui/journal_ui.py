@@ -21,6 +21,7 @@ from logic.tagging import suggest_tags
 from logic.ai_analyzer import get_journal_feedback, is_api_configured, refine_profile_with_journal
 from models.data_models import JournalEntry
 from prompts.daily_prompts import get_daily_prompt, get_balanced_prompt
+from ui.styles import get_hero_card, get_section_header, get_info_banner
 
 
 def init_journal_state() -> None:
@@ -37,7 +38,27 @@ def render_journal_page() -> None:
     """ジャーナル画面をレンダリング"""
     init_journal_state()
 
-    st.title("📝 ジャーナル")
+    # ページヘッダー
+    st.markdown("""
+    <div style="
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    ">
+        <div style="font-size: 2.5rem;">📝</div>
+        <div>
+            <h1 style="
+                margin: 0;
+                font-size: 2rem;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            ">ジャーナル</h1>
+            <p style="margin: 0; color: #718096; font-size: 0.9rem;">日々の振り返りを記録しましょう</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     user_id = st.session_state.get("user_id", "default_user")
 
@@ -55,38 +76,56 @@ def render_journal_form(user_id: str) -> None:
     """ジャーナル入力フォーム"""
     # AIフィードバックがあれば表示（改善されたカード形式）
     if "ai_feedback" in st.session_state and st.session_state.ai_feedback:
-        st.markdown("""
-        <style>
-        .ai-feedback-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            color: white;
-        }
-        .ai-feedback-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 12px;
-        }
-        .ai-feedback-content {
-            font-size: 15px;
-            line-height: 1.7;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        
         st.markdown(f"""
-        <div class="ai-feedback-card">
-            <div class="ai-feedback-title">💬 AIカウンセラーからのメッセージ</div>
-            <div class="ai-feedback-content">{st.session_state.ai_feedback}</div>
+        <div style="
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        ">
+            <div style="
+                position: absolute;
+                top: -20px;
+                right: -20px;
+                font-size: 4rem;
+                opacity: 0.1;
+            ">💬</div>
+            <div style="
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                margin-bottom: 1rem;
+            ">
+                <div style="
+                    width: 40px;
+                    height: 40px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 1.25rem;
+                ">🤖</div>
+                <div>
+                    <div style="font-weight: 600; color: #e2e8f0;">AIカウンセラーからのメッセージ</div>
+                    <div style="font-size: 0.75rem; color: #a0aec0;">あなたのジャーナルを読んで</div>
+                </div>
+            </div>
+            <div style="
+                color: #e2e8f0;
+                line-height: 1.7;
+                font-size: 0.95rem;
+            ">{st.session_state.ai_feedback}</div>
         </div>
         """, unsafe_allow_html=True)
         
         if st.button("✨ メッセージを閉じる", key="close_feedback"):
             st.session_state.ai_feedback = None
             st.rerun()
-        st.markdown("---")
+        st.markdown("<div style='margin-bottom: 1.5rem;'></div>", unsafe_allow_html=True)
     
     # 最新の性格タイプを取得
     personality_result = get_latest_personality(user_id)
@@ -95,10 +134,34 @@ def render_journal_form(user_id: str) -> None:
     # 動的プロンプトの表示
     if personality_type:
         prompt = get_balanced_prompt(personality_type)
-        st.info(f"💭 **今日の問いかけ**: {prompt}")
-        st.caption(f"あなたのタイプ「{personality_type}」に基づいたプロンプトです")
+        st.markdown(f"""
+        <div style="
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.1) 0%, rgba(0, 242, 254, 0.05) 100%);
+            border: 1px solid rgba(79, 172, 254, 0.2);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+        ">
+            <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                <div style="font-size: 1.25rem;">💭</div>
+                <div>
+                    <div style="font-weight: 600; color: #e2e8f0; margin-bottom: 0.25rem;">今日の問いかけ</div>
+                    <div style="color: #a0aec0; font-size: 0.95rem; line-height: 1.5;">{prompt}</div>
+                    <div style="color: #718096; font-size: 0.75rem; margin-top: 0.5rem;">
+                        あなたのタイプ「{personality_type}」に基づいたプロンプトです
+                    </div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     else:
-        st.info("💭 **ヒント**: 性格診断を受けると、あなたに合った問いかけが表示されます")
+        st.markdown(get_info_banner(
+            "💡",
+            "ヒント",
+            "性格診断を受けると、あなたに合った問いかけが表示されます",
+            "#4facfe"
+        ), unsafe_allow_html=True)
+
 
     # 既存の全タグを取得
     existing_tags = get_all_tags(user_id)
@@ -260,35 +323,135 @@ def render_journal_form(user_id: str) -> None:
 def render_journal_history(user_id: str) -> None:
     """ジャーナル履歴表示"""
     entries = get_journal_entries(user_id, limit=30)
-    existing_tags = get_all_tags(user_id) # 編集用
+    existing_tags = get_all_tags(user_id)  # 編集用
 
     if not entries:
-        st.info("まだジャーナルエントリーがありません。最初のエントリーを書いてみましょう！")
+        st.markdown("""
+        <div style="
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+        ">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📝</div>
+            <div style="color: #e2e8f0; font-size: 1.1rem; margin-bottom: 0.5rem;">
+                まだジャーナルエントリーがありません
+            </div>
+            <div style="color: #718096; font-size: 0.9rem;">
+                最初のエントリーを書いてみましょう！
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         return
 
-    st.markdown(f"### 📚 最近のエントリー（{len(entries)}件）")
+    # ヘッダー
+    st.markdown(f"""
+    <div style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    ">
+        <div>
+            <h3 style="margin: 0; color: #e2e8f0;">📚 最近のエントリー</h3>
+            <div style="color: #718096; font-size: 0.875rem;">{len(entries)}件のエントリー</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     # 感情の推移グラフ
     if len(entries) >= 2:
+        st.markdown("""
+        <div style="
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        ">
+            <div style="
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                margin-bottom: 1rem;
+            ">
+                <span style="font-size: 1.25rem;">📈</span>
+                <span style="color: #e2e8f0; font-weight: 600;">気分の推移</span>
+            </div>
+        """, unsafe_allow_html=True)
         render_emotion_chart(entries)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # エントリー一覧
     for entry in entries:
-        # エキスパンダーのラベル
-        label = f"📅 {entry.date.strftime('%Y年%m月%d日')} - 気分: {'😃' if entry.emotion_score >= 7 else '😐' if entry.emotion_score >= 4 else '😔'} ({entry.emotion_score}/10)"
-            
-        with st.expander(label):
-            # --- 表示内容 ---
+        emotion_emoji = get_emotion_emoji(entry.emotion_score)
+        emotion_color = "#38ef7d" if entry.emotion_score >= 7 else "#f59e0b" if entry.emotion_score >= 4 else "#ef4444"
+        
+        # エントリーカード
+        st.markdown(f"""
+        <div style="
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        ">
+            <div style="
+                font-size: 1.5rem;
+                width: 48px;
+                height: 48px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 12px;
+            ">{emotion_emoji}</div>
+            <div style="flex: 1;">
+                <div style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 0.25rem;
+                ">
+                    <span style="color: #e2e8f0; font-weight: 500;">
+                        {entry.date.strftime('%Y年%m月%d日')}
+                    </span>
+                    <span style="
+                        color: {emotion_color};
+                        font-size: 0.875rem;
+                        font-weight: 600;
+                    ">気分: {entry.emotion_score}/10</span>
+                </div>
+                <div style="
+                    color: #a0aec0;
+                    font-size: 0.875rem;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 400px;
+                ">{entry.content[:80]}{'...' if len(entry.content) > 80 else ''}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        with st.expander("📖 詳細を見る", expanded=False):
             st.markdown(entry.content)
 
             if entry.tags:
-                tag_str = " ".join([f"`{tag}`" for tag in entry.tags])
-                st.markdown(f"🏷️ {tag_str}")
+                st.markdown(f"""
+                <div style="margin-top: 0.75rem;">
+                    {''.join([f'<span style="background: rgba(102, 126, 234, 0.2); color: #a0aec0; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; margin-right: 0.5rem;">{tag}</span>' for tag in entry.tags])}
+                </div>
+                """, unsafe_allow_html=True)
 
             if entry.personality_type:
                 st.caption(f"タイプ: {entry.personality_type}")
             
-            # 操作ボタンエリア（編集機能は削除）
+            # 削除ボタン
             if st.button("🗑️ 削除", key=f"del_{entry.id}"):
                 if delete_journal_entry(entry.id):
                     st.success("エントリーを削除しました")
@@ -310,8 +473,8 @@ def render_emotion_chart(entries: list[JournalEntry]) -> None:
     }
     df = pd.DataFrame(data)
 
-    st.markdown("#### 📈 気分の推移")
     st.line_chart(df.set_index("日付"))
+
 
 
 def get_emotion_emoji(score: int) -> str:

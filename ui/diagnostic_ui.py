@@ -12,6 +12,13 @@ from data.questions import DIAGNOSTIC_QUESTIONS, get_total_questions
 from logic.diagnostic import calculate_personality_type, get_dimension_explanation
 from models.data_models import UserResponse
 from database.db_manager import save_personality_result
+from ui.styles import (
+    get_hero_card,
+    get_feature_card,
+    get_question_card,
+    get_result_type_card,
+    get_section_header,
+)
 
 
 QUESTIONS_PER_PAGE = 5
@@ -44,8 +51,6 @@ def render_diagnostic_page() -> None:
     """診断画面をレンダリング"""
     init_diagnostic_state()
 
-    st.title("🔮 性格診断")
-
     if st.session_state.diagnostic_complete:
         render_result_page()
         return
@@ -59,29 +64,97 @@ def render_diagnostic_page() -> None:
 
 def render_start_page() -> None:
     """診断開始ページ"""
+    # ヒーローセクション
+    st.markdown(get_hero_card(
+        title="性格診断",
+        subtitle="30問の質問であなたの性格特性を4つの指標で分析します",
+        icon="🔮"
+    ), unsafe_allow_html=True)
+    
+    # 4つの指標カード
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.markdown(get_feature_card(
+            icon="🔄",
+            title="E/I",
+            description="外向型 vs 内向型"
+        ), unsafe_allow_html=True)
+    with col2:
+        st.markdown(get_feature_card(
+            icon="💭",
+            title="S/N",
+            description="感覚型 vs 直観型"
+        ), unsafe_allow_html=True)
+    with col3:
+        st.markdown(get_feature_card(
+            icon="🧠",
+            title="T/F",
+            description="思考型 vs 感情型"
+        ), unsafe_allow_html=True)
+    with col4:
+        st.markdown(get_feature_card(
+            icon="📋",
+            title="J/P",
+            description="判断型 vs 知覚型"
+        ), unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # 診断情報カード
     st.markdown("""
-    ## 自己分析のための性格診断
+    <div style="
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    ">
+        <div style="display: flex; justify-content: space-around; text-align: center;">
+            <div>
+                <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">📝</div>
+                <div style="color: #a0aec0; font-size: 0.8rem;">問題数</div>
+                <div style="color: #e2e8f0; font-weight: 600;">30問</div>
+            </div>
+            <div>
+                <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">⏱️</div>
+                <div style="color: #a0aec0; font-size: 0.8rem;">所要時間</div>
+                <div style="color: #e2e8f0; font-weight: 600;">約5〜10分</div>
+            </div>
+            <div>
+                <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">⭐</div>
+                <div style="color: #a0aec0; font-size: 0.8rem;">回答方式</div>
+                <div style="color: #e2e8f0; font-weight: 600;">5段階評価</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # ヒント
+    st.markdown("""
+    <div style="
+        background: linear-gradient(135deg, rgba(79, 172, 254, 0.1) 0%, rgba(0, 242, 254, 0.05) 100%);
+        border: 1px solid rgba(79, 172, 254, 0.2);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    ">
+        <div style="font-size: 1.5rem;">💡</div>
+        <div style="color: #a0aec0; font-size: 0.9rem;">
+            各質問に対して、最も当てはまると思う選択肢を選んでください。<br>
+            正解・不正解はありません。<strong style="color: #e2e8f0;">直感的に答えること</strong>をお勧めします。
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    この診断は、あなたの性格特性を4つの指標で分析します：
-
-    - **E/I** - 外向型 vs 内向型
-    - **S/N** - 感覚型 vs 直観型
-    - **T/F** - 思考型 vs 感情型
-    - **J/P** - 判断型 vs 知覚型
-
-    ### 診断について
-
-    - **問題数**: 30問
-    - **所要時間**: 約5〜10分
-    - **回答方式**: 5段階評価
-
-    各質問に対して、あなたに最も当てはまると思う選択肢を選んでください。
-    正解・不正解はありません。直感的に答えることをお勧めします。
-    """)
-
-    if st.button("🚀 診断を開始する", type="primary", use_container_width=True):
-        st.session_state.diagnostic_started = True
-        st.rerun()
+    # 開始ボタン
+    col_btn = st.columns([1, 2, 1])
+    with col_btn[1]:
+        if st.button("🚀 診断を開始する", type="primary", use_container_width=True):
+            st.session_state.diagnostic_started = True
+            st.rerun()
 
 
 def render_questions_page() -> None:
@@ -90,22 +163,71 @@ def render_questions_page() -> None:
     total_pages = (total_questions + QUESTIONS_PER_PAGE - 1) // QUESTIONS_PER_PAGE
     current_page = st.session_state.current_page
 
-    # プログレスバー
+    # ページヘッダー
+    st.markdown(f"""
+    <div style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    ">
+        <div>
+            <h2 style="margin: 0; color: #e2e8f0; font-size: 1.5rem;">
+                🔮 性格診断
+            </h2>
+            <div style="color: #718096; font-size: 0.9rem;">
+                ページ {current_page + 1} / {total_pages}
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # プログレスバー（モダン版）
     answered_count = len(st.session_state.responses)
-    progress = answered_count / total_questions
-    st.progress(progress, text=f"進捗: {answered_count}/{total_questions}問完了")
+    progress_percent = (answered_count / total_questions) * 100
+    
+    st.markdown(f"""
+    <div style="
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.5rem;
+    ">
+        <div style="
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        ">
+            <span style="color: #a0aec0;">進捗状況</span>
+            <span style="color: #e2e8f0; font-weight: 600;">{answered_count} / {total_questions} 問完了</span>
+        </div>
+        <div style="
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+        ">
+            <div style="
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                height: 100%;
+                width: {progress_percent}%;
+                border-radius: 10px;
+                transition: width 0.3s ease;
+            "></div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     # 現在のページの質問を取得
     start_idx = current_page * QUESTIONS_PER_PAGE
     end_idx = min(start_idx + QUESTIONS_PER_PAGE, total_questions)
     page_questions = DIAGNOSTIC_QUESTIONS[start_idx:end_idx]
 
-    # ページ情報
-    st.markdown(f"### ページ {current_page + 1} / {total_pages}")
-
     # 質問を表示
     for question in page_questions:
-        st.markdown(f"**Q{question.id}.** {question.text}")
+        # 質問カード
+        st.markdown(get_question_card(question.id, question.text), unsafe_allow_html=True)
 
         options = [
             "1: 全く当てはまらない",
@@ -132,9 +254,11 @@ def render_questions_page() -> None:
             score = int(response[0])  # "1: ..." から 1 を抽出
             st.session_state.responses[question.id] = score
 
-        st.markdown("---")
+        st.markdown("<div style='margin-bottom: 1rem;'></div>", unsafe_allow_html=True)
 
     # ナビゲーションボタン
+    st.markdown("<div style='margin-top: 2rem;'></div>", unsafe_allow_html=True)
+    
     col1, col2, col3 = st.columns([1, 1, 1])
 
     with col1:
@@ -144,7 +268,32 @@ def render_questions_page() -> None:
                 st.rerun()
 
     with col2:
-        st.markdown(f"<div style='text-align: center;'>ページ {current_page + 1}/{total_pages}</div>", unsafe_allow_html=True)
+        # ページインジケーター
+        st.markdown(f"""
+        <div style="
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+        ">
+        """, unsafe_allow_html=True)
+        
+        for i in range(total_pages):
+            is_current = i == current_page
+            color = "#667eea" if is_current else "rgba(255,255,255,0.2)"
+            size = "10px" if is_current else "8px"
+            st.markdown(f"""
+            <span style="
+                display: inline-block;
+                width: {size};
+                height: {size};
+                background: {color};
+                border-radius: 50%;
+            "></span>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with col3:
         if current_page < total_pages - 1:
@@ -198,41 +347,95 @@ def render_result_page() -> None:
         st.error("診断結果が見つかりません")
         return
 
-    # タイプ表示
-    st.markdown(f"""
-    # 🎉 あなたのタイプは **{result.personality_type}** です！
-
-    ## {result.type_description}
-    """)
+    # タイプ表示（モダンカード）
+    st.markdown(get_result_type_card(
+        result.personality_type,
+        result.type_description
+    ), unsafe_allow_html=True)
 
     # 各指標の詳細
-    st.markdown("### 📊 各指標の詳細")
+    st.markdown(get_section_header("📊", "各指標の詳細", "あなたの性格タイプの内訳"), unsafe_allow_html=True)
 
     for score in result.dimension_scores:
-        col1, col2 = st.columns([3, 1])
+        # プログレスバーで強度を表示
+        if score.dominant_type == score.first_type:
+            # 第1タイプが優勢
+            display_value = 50 + (score.strength_percent / 2)
+        else:
+            # 第2タイプが優勢
+            display_value = 50 - (score.strength_percent / 2)
 
-        with col1:
-            # プログレスバーで強度を表示
-            if score.dominant_type == score.first_type:
-                # 第1タイプが優勢
-                display_value = 50 + (score.strength_percent / 2)
-            else:
-                # 第2タイプが優勢
-                display_value = 50 - (score.strength_percent / 2)
-
-            st.markdown(f"**{score.first_type} ← → {score.second_type}**")
-            st.progress(display_value / 100)
-
-        with col2:
-            st.markdown(f"**{score.dominant_type}** ({score.strength_percent:.1f}%)")
+        # モダンなスコアバー
+        st.markdown(f"""
+        <div style="
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        ">
+            <div style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 0.75rem;
+            ">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="
+                        font-size: 1.25rem;
+                        font-weight: 600;
+                        color: {'#667eea' if score.dominant_type == score.first_type else '#a0aec0'};
+                    ">{score.first_type}</span>
+                    <span style="color: #718096;">←→</span>
+                    <span style="
+                        font-size: 1.25rem;
+                        font-weight: 600;
+                        color: {'#667eea' if score.dominant_type == score.second_type else '#a0aec0'};
+                    ">{score.second_type}</span>
+                </div>
+                <div style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    padding: 0.25rem 0.75rem;
+                    border-radius: 20px;
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    color: white;
+                ">{score.dominant_type} ({score.strength_percent:.0f}%)</div>
+            </div>
+            <div style="
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
+                height: 12px;
+                overflow: hidden;
+                position: relative;
+            ">
+                <div style="
+                    position: absolute;
+                    left: 50%;
+                    top: 0;
+                    bottom: 0;
+                    width: 2px;
+                    background: rgba(255, 255, 255, 0.2);
+                "></div>
+                <div style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    height: 100%;
+                    width: {display_value}%;
+                    border-radius: 10px;
+                    transition: width 0.5s ease;
+                "></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         # 説明
         explanation = get_dimension_explanation(score.dimension, score.dominant_type)
-        st.info(explanation)
+        with st.expander(f"💡 {score.dominant_type}タイプの特徴を見る"):
+            st.markdown(explanation)
 
     # アクションボタン
-    st.markdown("---")
-
+    st.markdown("<div style='margin-top: 2rem;'></div>", unsafe_allow_html=True)
+    
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔄 もう一度診断する", use_container_width=True):
@@ -240,6 +443,6 @@ def render_result_page() -> None:
             st.rerun()
 
     with col2:
-        if st.button("📝 ジャーナルを書く", use_container_width=True):
+        if st.button("📝 ジャーナルを書く", type="primary", use_container_width=True):
             st.session_state.current_view = "journal"
             st.rerun()
