@@ -255,24 +255,25 @@ def _render_axis_comparison(
             # ここではst.progressは1つの値しか出せないので、HTML/CSSでカスタムバーを作るのが見やすい
             
             # バーの背景
+            # バーの背景
             st.markdown(f"""
-            <div style="position: relative; width: 100%; height: 24px; background-color: #f0f2f6; border-radius: 12px; margin-bottom: 8px;">
-                <!-- 中心線 -->
-                <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background-color: #ccc;"></div>
-                
-                <!-- 診断スコア (青) -->
-                <div style="position: absolute; left: {diag_val*100}%; top: 4px; width: 16px; height: 16px; 
-                            background-color: #4c7bf4; border-radius: 50%; transform: translateX(-50%); 
-                            border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"
-                     title="診断結果"></div>
-                     
-                <!-- 日記スコア (赤) -->
-                <div style="position: absolute; left: {est_val*100}%; top: 4px; width: 16px; height: 16px; 
-                            background-color: #ff6b6b; border-radius: 50%; transform: translateX(-50%);
-                            border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"
-                     title="最近の日記傾向"></div>
-            </div>
-            """, unsafe_allow_html=True)
+<div style="position: relative; width: 100%; height: 24px; background-color: #f0f2f6; border-radius: 12px; margin-bottom: 8px;">
+    <!-- 中心線 -->
+    <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background-color: #ccc;"></div>
+    
+    <!-- 診断スコア (青) -->
+    <div style="position: absolute; left: {diag_val*100}%; top: 4px; width: 16px; height: 16px; 
+                background-color: #4c7bf4; border-radius: 50%; transform: translateX(-50%); 
+                border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"
+            title="診断結果"></div>
+            
+    <!-- 日記スコア (赤) -->
+    <div style="position: absolute; left: {est_val*100}%; top: 4px; width: 16px; height: 16px; 
+                background-color: #ff6b6b; border-radius: 50%; transform: translateX(-50%);
+                border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"
+            title="最近の日記傾向"></div>
+</div>
+""", unsafe_allow_html=True)
             
             # 変化の解説
             diff = est_val - diag_val
