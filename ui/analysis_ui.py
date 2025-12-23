@@ -226,6 +226,20 @@ def _render_axis_comparison(
         ("知覚(P) / 判断(J)", "JP", "J", "P"),
     ]
     
+    # 凡例を表示
+    st.markdown("""
+    <div style="display: flex; gap: 20px; margin-bottom: 20px; font-size: 0.9em;">
+        <div style="display: flex; align-items: center;">
+            <div style="width: 12px; height: 12px; background-color: #4c7bf4; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.2); margin-right: 6px;"></div>
+            <span>診断結果（ベース）</span>
+        </div>
+        <div style="display: flex; align-items: center;">
+            <div style="width: 12px; height: 12px; background-color: #ff6b6b; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.2); margin-right: 6px;"></div>
+            <span>日々の振る舞い（実態）</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     for label, code, left, right in axes:
         # 1. 診断スコアの計算 (0.0=Left, 1.0=Right)
         # 該当するDimensionScoreを探す
@@ -248,18 +262,15 @@ def _render_axis_comparison(
         with col1:
             st.markdown(f"**{left}**")
         with col3:
-            st.markdown(f"**{right}**")
-        
-        with col2:
-            # プログレスバー風の可視化をAltairで行うか、簡易的に文字で表示するか
-            # ここではst.progressは1つの値しか出せないので、HTML/CSSでカスタムバーを作るのが見やすい
+            st.markdown(f"**{right}**", unsafe_allow_html=True) # 右寄せ等はCSSで調整可能だが今回は簡易的に
             
+        with col2:
             # バーの背景
             bar_html = f"""
-            <div style="position: relative; width: 100%; height: 24px; background-color: #f0f2f6; border-radius: 12px; margin-bottom: 8px;">
-                <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background-color: #ccc;"></div>
-                <div style="position: absolute; left: {diag_val*100}%; top: 4px; width: 16px; height: 16px; background-color: #4c7bf4; border-radius: 50%; transform: translateX(-50%); border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" title="診断結果"></div>
-                <div style="position: absolute; left: {est_val*100}%; top: 4px; width: 16px; height: 16px; background-color: #ff6b6b; border-radius: 50%; transform: translateX(-50%); border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);" title="最近の日記傾向"></div>
+            <div style="position: relative; width: 100%; height: 30px; background-color: #f0f2f6; border-radius: 15px; margin-bottom: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="position: absolute; left: 50%; top: 5px; bottom: 5px; width: 1px; background-color: #d1d5db;"></div>
+                <div style="position: absolute; left: {diag_val*100}%; top: 50%; width: 16px; height: 16px; background-color: #4c7bf4; border-radius: 50%; transform: translate(-50%, -50%); border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.15); z-index: 1;" title="診断結果: {left if diag_val < 0.5 else right}"></div>
+                <div style="position: absolute; left: {est_val*100}%; top: 50%; width: 16px; height: 16px; background-color: #ff6b6b; border-radius: 50%; transform: translate(-50%, -50%); border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.15); z-index: 2;" title="実態: {left if est_val < 0.5 else right}"></div>
             </div>
             """
             st.markdown(bar_html.replace('\n', ''), unsafe_allow_html=True)
