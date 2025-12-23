@@ -190,11 +190,20 @@ def init_database() -> None:
     """データベースとテーブルを初期化"""
     conn = get_connection()
     cursor = conn.cursor()
+    
+    # PostgreSQL判定
+    is_postgres = hasattr(cursor, "query")
+    
+    # ID定義（PostgreSQL: SERIAL, SQLite: INTEGER AUTOINCREMENT）
+    if is_postgres:
+        id_def = "SERIAL PRIMARY KEY"
+    else:
+        id_def = "INTEGER PRIMARY KEY AUTOINCREMENT"
 
     # 性格診断結果テーブル
-    cursor.execute("""
+    cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS personality_results (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id {id_def},
             user_id TEXT NOT NULL,
             personality_type TEXT NOT NULL,
             dimension_scores TEXT NOT NULL,
@@ -203,9 +212,9 @@ def init_database() -> None:
     """)
 
     # ジャーナルエントリーテーブル
-    cursor.execute("""
+    cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS journal_entries (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id {id_def},
             user_id TEXT NOT NULL,
             date TIMESTAMP NOT NULL,
             content TEXT NOT NULL,
@@ -216,9 +225,9 @@ def init_database() -> None:
     """)
 
     # AI分析結果テーブル
-    cursor.execute("""
+    cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS ai_analysis_results (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id {id_def},
             user_id TEXT NOT NULL,
             behavior_patterns TEXT NOT NULL,
             thinking_patterns TEXT NOT NULL,
@@ -233,32 +242,17 @@ def init_database() -> None:
     """)
 
     # ダイナミック・タイプ・プロファイルテーブル
-    if _get_db_url():
-        # PostgreSQL
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS dynamic_profiles (
-                user_id TEXT PRIMARY KEY,
-                base_type TEXT NOT NULL,
-                refined_description TEXT NOT NULL,
-                validated_strengths TEXT NOT NULL,
-                observed_challenges TEXT NOT NULL,
-                estimated_axis_scores TEXT,
-                last_updated TIMESTAMP NOT NULL
-            )
-        """)
-    else:
-        # SQLite
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS dynamic_profiles (
-                user_id TEXT PRIMARY KEY,
-                base_type TEXT NOT NULL,
-                refined_description TEXT NOT NULL,
-                validated_strengths TEXT NOT NULL,
-                observed_challenges TEXT NOT NULL,
-                estimated_axis_scores TEXT,
-                last_updated TIMESTAMP NOT NULL
-            )
-        """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS dynamic_profiles (
+            user_id TEXT PRIMARY KEY,
+            base_type TEXT NOT NULL,
+            refined_description TEXT NOT NULL,
+            validated_strengths TEXT NOT NULL,
+            observed_challenges TEXT NOT NULL,
+            estimated_axis_scores TEXT,
+            last_updated TIMESTAMP NOT NULL
+        )
+    """)
 
     conn.commit()
     conn.close()
