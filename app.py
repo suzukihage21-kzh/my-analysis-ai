@@ -25,7 +25,13 @@ st.set_page_config(
 def init_app() -> None:
     """アプリケーションの初期化"""
     # データベースを初期化
-    init_database()
+    try:
+        init_database()
+    except ConnectionError as e:
+        st.error(f"⚠️ データベース接続エラー: {e}")
+        st.warning("管理者に連絡するか、Secretsの設定（DATABASE_URL）を確認してください。")
+        st.info("このエラーが発生している間、データの保存・読み込みはできません。")
+        st.stop()  # アプリを停止
 
     # セッション状態の初期化
     if "user_id" not in st.session_state:

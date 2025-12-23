@@ -44,8 +44,26 @@ def _get_db_url() -> Optional[str]:
     return os.getenv("DATABASE_URL")
 
 
+def is_cloud_environment() -> bool:
+    """Streamlit Cloud環境かどうかを判定"""
+    # Streamlit CloudではSTREAMLIT環境変数またはSecretsが存在
+    return (
+        os.getenv("STREAMLIT_SHARING_MODE") is not None or
+        os.getenv("STREAMLIT_RUNTIME_ENV") is not None or
+        (hasattr(st, "secrets") and len(st.secrets) > 0)
+    )
+
+
+def get_db_type() -> str:
+    """現在使用中のデータベースタイプを返す"""
+    db_url = _get_db_url()
+    if db_url and psycopg2:
+        return "PostgreSQL"
+    return "SQLite (Local)"
+
+
 def get_connection():
-    """データベース接続を取得 (Dual DB support)"""
+    """データベース接続を取得 (Dual DB support with safeguards)"""
     db_url = _get_db_url()
     
     if db_url and psycopg2:
@@ -54,11 +72,22 @@ def get_connection():
             conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor)
             return conn
         except Exception as e:
-            # Fallback to SQLite if connection fails (local dev safety)
-            print(f"PostgreSQL connection failed: {e}. Falling back to SQLite.")
-            pass
+            if is_cloud_environment():
+                # クラウド環境ではフォールバックせずエラー
+                raise ConnectionError(
+                    f"PostgreSQLへの接続に失敗しました。データが永続化されません。: {e}"
+                )
+            else:
+                # ローカル開発ではフォールバックを許可
+                print(f"PostgreSQL connection failed: {e}. Falling back to SQLite.")
+    
+    # クラウド環境でDB URLがない場合はエラー
+    if is_cloud_environment() and not db_url:
+        raise ConnectionError(
+            "Cloud環境でDATABASE_URLが設定されていません。Secretsを確認してください。"
+        )
 
-    # SQLite (Local)
+    # SQLite (Local only)
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     return conn
