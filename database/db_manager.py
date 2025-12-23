@@ -447,6 +447,47 @@ def delete_journal_entry(entry_id: int) -> bool:
     return deleted
 
 
+def update_journal_entry(entry: JournalEntry) -> bool:
+    """
+    ジャーナルエントリーを更新
+    
+    Args:
+        entry: 更新するジャーナルエントリー（ID必須）
+        
+    Returns:
+        bool: 更新成功時はTrue
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    query = """
+        UPDATE journal_entries 
+        SET content = ?, tags = ?, emotion_score = ?
+        WHERE id = ?
+    """
+    
+    try:
+        _execute(
+            cursor, 
+            query, 
+            (
+                entry.content,
+                json.dumps(entry.tags, ensure_ascii=False),
+                entry.emotion_score,
+                entry.id
+            )
+        )
+        conn.commit()
+        success = True
+    except Exception as e:
+        print(f"Update error: {e}")
+        success = False
+    finally:
+        conn.close()
+        
+    return success
+
+
 def get_all_tags(user_id: str) -> list[str]:
     """
     使用されている全てのタグを取得

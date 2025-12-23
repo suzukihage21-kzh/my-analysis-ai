@@ -14,6 +14,7 @@ from database.db_manager import (
     get_journal_entries,
     get_latest_personality,
     save_journal_entry,
+    update_journal_entry,
 )
 from logic.tagging import suggest_tags
 from logic.ai_analyzer import get_journal_feedback, is_api_configured, refine_profile_with_journal
@@ -27,6 +28,8 @@ def init_journal_state() -> None:
         st.session_state.journal_saved = False
     if "show_history" not in st.session_state:
         st.session_state.show_history = False
+    if "editing_entry_id" not in st.session_state:
+        st.session_state.editing_entry_id = None
 
 
 def render_journal_page() -> None:
@@ -254,6 +257,7 @@ def render_journal_form(user_id: str) -> None:
 def render_journal_history(user_id: str) -> None:
     """ジャーナル履歴表示"""
     entries = get_journal_entries(user_id, limit=30)
+    existing_tags = get_all_tags(user_id) # 編集用
 
     if not entries:
         st.info("まだジャーナルエントリーがありません。最初のエントリーを書いてみましょう！")
@@ -267,25 +271,100 @@ def render_journal_history(user_id: str) -> None:
 
     # エントリー一覧
     for entry in entries:
-        with st.expander(
-            f"📅 {entry.date.strftime('%Y年%m月%d日')} - 気分: {'😃' if entry.emotion_score >= 7 else '😐' if entry.emotion_score >= 4 else '😔'} ({entry.emotion_score}/10)"
-        ):
-            st.markdown(entry.content)
-
-            if entry.tags:
-                tag_str = " ".join([f"`{tag}`" for tag in entry.tags])
-                st.markdown(f"🏷️ {tag_str}")
-
-            if entry.personality_type:
-                st.caption(f"タイプ: {entry.personality_type}")
+        is_editing = st.session_state.get("editing_entry_id") == entry.id
+        
+        # エキスパンダーのラベル
+        label = f"📅 {entry.date.strftime('%Y年%m月%d日')} - 気分: {'😃' if entry.emotion_score >= 7 else '😐' if entry.emotion_score >= 4 else '😔'} ({entry.emotion_score}/10)"
+        if is_editing:
+            label = f"✏️ 編集モード: {entry.date.strftime('%Y年%m月%d日')}"
             
-            # 削除ボタン
-            if st.button("🗑️ 削除", key=f"del_{entry.id}"):
-                if delete_journal_entry(entry.id):
-                    st.success("エントリーを削除しました")
-                    st.rerun()
-                else:
-                    st.error("削除に失敗しました")
+        with st.expander(label, expanded=is_editing):
+            
+            if is_editing:
+                # --- 編集モード ---
+                with st.form(key=f"edit_form_{entry.id}"):
+                    # 本文編集
+                    new_content = st.text_area("本文", value=entry.content, height=150)
+                    
+                    # 気分編集
+                    new_emotion = st.slider(
+                        "気分", min_value=1, max_value=10, value=entry.emotion_score
+                    )
+                    
+                    # タグ編集（既存タグの選択）
+                    current_tags = [t for t in entry.tags if t in existing_tags]
+                    custom_tags_val = ", ".join([t for t in entry.tags if t not in existing_tags])
+                    
+                    col_tag1, col_tag2 = st.columns(2)
+                    with col_tag1:
+                        new_selected_tags = st.multiselect(
+                            "既存タグ", existing_tags, default=current_tags
+                        )
+                    with col_tag2:
+                        new_custom_tags_str = st.text_input(
+                            "新規タグ（カンマ区切り）", value=custom_tags_val
+                        )
+                    
+                    col_btn1, col_btn2 = st.columns([1, 1])
+                    with col_btn1:
+                         if st.form_submit_button("💾 保存", type="primary", use_container_width=True):
+                            # タグの結合
+                            final_tags = list(new_selected_tags)
+                            if new_custom_tags_str:
+                                extra_tags = [t.strip() for t in new_custom_tags_str.split(",") if t.strip()]
+                                final_tags.extend(extra_tags)
+                            final_tags = sorted(list(set(final_tags)))
+                            
+                            # 更新オブジェクト
+                            updated_entry = JournalEntry(
+                                id=entry.id,
+                                user_id=entry.user_id,
+                                date=entry.date, # 日付は変更しない
+                                content=new_content,
+                                tags=final_tags,
+                                emotion_score=new_emotion,
+                                personality_type=entry.personality_type
+                            )
+                            
+                            if update_journal_entry(updated_entry):
+                                st.session_state.editing_entry_id = None
+                                st.success("更新しました！")
+                                st.rerun()
+                            else:
+                                st.error("更新に失敗しました")
+                                
+                    with col_btn2:
+                        # フォーム内でのキャンセルは難しい（submitボタンしかイベント発火しないため）
+                        # フォーム外に設置するか、submitボタンの一つとして実装しstateで分岐する
+                        # ここでは「キャンセル」ボタンもsubmit扱いにして、処理せずにstate戻す
+                        if st.form_submit_button("❌ キャンセル", use_container_width=True):
+                            st.session_state.editing_entry_id = None
+                            st.rerun()
+
+            else:
+                # --- 表示モード ---
+                st.markdown(entry.content)
+
+                if entry.tags:
+                    tag_str = " ".join([f"`{tag}`" for tag in entry.tags])
+                    st.markdown(f"🏷️ {tag_str}")
+
+                if entry.personality_type:
+                    st.caption(f"タイプ: {entry.personality_type}")
+                
+                # 操作ボタンエリア
+                col_op1, col_op2 = st.columns([1, 4])
+                with col_op1:
+                    if st.button("✏️ 編集", key=f"edit_btn_{entry.id}"):
+                        st.session_state.editing_entry_id = entry.id
+                        st.rerun()
+                with col_op2:
+                    if st.button("🗑️ 削除", key=f"del_{entry.id}"):
+                        if delete_journal_entry(entry.id):
+                            st.success("エントリーを削除しました")
+                            st.rerun()
+                        else:
+                            st.error("削除に失敗しました")
 
 
 def render_emotion_chart(entries: list[JournalEntry]) -> None:
