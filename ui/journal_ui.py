@@ -277,14 +277,15 @@ def render_journal_history(user_id: str) -> None:
         # エキスパンダーのラベル
         label = f"📅 {entry.date.strftime('%Y年%m月%d日')} - 気分: {'😃' if entry.emotion_score >= 7 else '😐' if entry.emotion_score >= 4 else '😔'} ({entry.emotion_score}/10)"
         if is_editing:
-            label = f"✏️ 編集モード: {entry.date.strftime('%Y年%m月%d日')}"
+            label = f"📝 編集中: {label}"
             
         with st.expander(label, expanded=is_editing):
             
             if is_editing:
                 # --- 編集モード ---
                 # フォーム外でタグ提案ボタンを配置（フォームの前に）
-                st.markdown("🏷️ **タグ設定**")
+                
+                # セッション状態キーを動的に生成
                 
                 # セッション状態キーを動的に生成
                 suggest_key = f"suggest_tags_edit_{entry.id}"
