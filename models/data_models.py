@@ -7,8 +7,14 @@ Pydanticを使用した型安全なデータ構造を定義します。
 from datetime import datetime
 from enum import Enum
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
+
+
+def get_jst_now() -> datetime:
+    """日本時間(JST)の現在時刻を取得"""
+    return datetime.now(ZoneInfo("Asia/Tokyo"))
 
 
 class Dimension(str, Enum):
@@ -38,7 +44,7 @@ class UserResponse(BaseModel):
     user_id: str = Field(..., description="ユーザーID")
     question_id: int = Field(..., description="質問ID")
     score: int = Field(..., ge=1, le=5, description="回答スコア（1-5）")
-    timestamp: datetime = Field(default_factory=datetime.now, description="回答日時")
+    timestamp: datetime = Field(default_factory=get_jst_now, description="回答日時")
 
 
 class DimensionScore(BaseModel):
@@ -57,7 +63,7 @@ class PersonalityResult(BaseModel):
     user_id: str = Field(..., description="ユーザーID")
     personality_type: str = Field(..., min_length=4, max_length=4, description="4文字タイプ（例: INTJ）")
     dimension_scores: list[DimensionScore] = Field(..., description="各指標の詳細スコア")
-    diagnosed_at: datetime = Field(default_factory=datetime.now, description="診断日時")
+    diagnosed_at: datetime = Field(default_factory=get_jst_now, description="診断日時")
 
     @property
     def type_description(self) -> str:
@@ -87,7 +93,7 @@ class JournalEntry(BaseModel):
     """ジャーナルエントリー"""
     id: Optional[int] = Field(None, description="エントリーID")
     user_id: str = Field(..., description="ユーザーID")
-    date: datetime = Field(default_factory=datetime.now, description="日付")
+    date: datetime = Field(default_factory=get_jst_now, description="日付")
     content: str = Field(..., min_length=1, description="日記内容")
     tags: list[str] = Field(default_factory=list, description="タグリスト")
     emotion_score: int = Field(..., ge=1, le=10, description="感情スコア（1-10）")
@@ -111,4 +117,4 @@ class DynamicTypeProfile(BaseModel):
     validated_strengths: list[str] = Field(default_factory=list, description="日記で確認された強み")
     observed_challenges: list[str] = Field(default_factory=list, description="日記で観察された課題")
     estimated_axis_scores: dict[str, float] = Field(default_factory=dict, description="AI推定の指標スコア (0.0-1.0)")
-    last_updated: datetime = Field(default_factory=datetime.now, description="最終更新日時")
+    last_updated: datetime = Field(default_factory=get_jst_now, description="最終更新日時")

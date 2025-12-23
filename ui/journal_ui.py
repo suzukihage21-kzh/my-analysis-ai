@@ -5,6 +5,7 @@
 """
 
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import streamlit as st
 
@@ -103,10 +104,11 @@ def render_journal_form(user_id: str) -> None:
     existing_tags = get_all_tags(user_id)
 
     # 日付選択（key追加）
+    now_jst = datetime.now(ZoneInfo("Asia/Tokyo"))
     st.date_input(
         "📅 日付",
-        value=datetime.now().date(),
-        max_value=datetime.now().date(),
+        value=now_jst.date(),
+        max_value=now_jst.date(),
         key="journal_entry_date"
     )
 

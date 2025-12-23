@@ -11,6 +11,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Any
+from zoneinfo import ZoneInfo
 
 try:
     import psycopg2
@@ -33,13 +34,25 @@ DB_PATH = Path(__file__).parent.parent / "self_analysis.db"
 
 def _parse_datetime(value: str | datetime) -> datetime:
     """
-    日付値をdatetimeに変換（PostgreSQL/SQLite両対応）
-    PostgreSQLはdatetimeオブジェクトを直接返すが、
-    SQLiteは文字列を返すため、両方に対応する。
+    日付値をdatetimeに変換し、日本時間(JST)にする
     """
-    if isinstance(value, datetime):
-        return value
-    return datetime.fromisoformat(value)
+    jst = ZoneInfo("Asia/Tokyo")
+    
+    if isinstance(value, str):
+        try:
+            dt = datetime.fromisoformat(value)
+        except ValueError:
+            # 万が一フォーマットがおかしい場合
+            return datetime.now(jst)
+    else:
+        dt = value
+    
+    # タイムゾーンがない場合はUTCとみなしてJSTに変換
+    # (Streamlit Cloud等のサーバー時刻は通常UTC)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=ZoneInfo("UTC"))
+        
+    return dt.astimezone(jst)
 
 
 def _get_db_url() -> Optional[str]:

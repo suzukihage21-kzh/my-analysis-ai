@@ -175,7 +175,6 @@ def submit_diagnostic() -> None:
                 user_id=user_id,
                 question_id=question_id,
                 score=score,
-                timestamp=datetime.now(),
             )
         )
 

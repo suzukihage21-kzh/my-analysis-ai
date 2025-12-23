@@ -16,7 +16,7 @@ import streamlit as st
 
 
 from database.db_manager import get_dynamic_profile, save_dynamic_profile
-from models.data_models import DynamicTypeProfile, JournalEntry
+from models.data_models import DynamicTypeProfile, JournalEntry, get_jst_now
 
 # 環境変数を読み込み
 load_dotenv()
@@ -57,7 +57,7 @@ class AIAnalysisResult(BaseModel):
         description="人間性の総合的なサマリー"
     )
     analyzed_at: datetime = Field(
-        default_factory=datetime.now,
+        default_factory=get_jst_now,
         description="分析日時"
     )
 
@@ -217,13 +217,13 @@ def parse_ai_response(response_text: str) -> AIAnalysisResult:
             growth_areas=data.get("growth_areas", []),
             actionable_advice=data.get("actionable_advice", []),
             overall_summary=data.get("overall_summary", ""),
-            analyzed_at=datetime.now(),
+            analyzed_at=get_jst_now(),
         )
     except (json.JSONDecodeError, KeyError):
         # パースに失敗した場合はデフォルト値を返す
         return AIAnalysisResult(
             overall_summary="分析結果のパースに失敗しました。再度お試しください。",
-            analyzed_at=datetime.now(),
+            analyzed_at=get_jst_now(),
         )
 
 
@@ -455,7 +455,7 @@ JSON形式で返答してください。
             validated_strengths=data.get("validated_strengths", []),
             observed_challenges=data.get("observed_challenges", []),
             estimated_axis_scores=data.get("estimated_axis_scores", {}),
-            last_updated=datetime.now()
+            last_updated=get_jst_now()
         )
         
         save_dynamic_profile(new_profile)
@@ -692,7 +692,7 @@ JSON形式で返答してください。
             validated_strengths=data.get("validated_strengths", []),
             observed_challenges=data.get("observed_challenges", []),
             estimated_axis_scores=data.get("estimated_axis_scores", {}),
-            last_updated=datetime.now()
+            last_updated=get_jst_now()
         )
         
         save_dynamic_profile(new_profile)
@@ -838,7 +838,7 @@ JSON形式で返答してください。
             validated_strengths=data.get("validated_strengths", current_strengths),
             observed_challenges=data.get("observed_challenges", current_challenges),
             estimated_axis_scores=data.get("estimated_axis_scores", {}),
-            last_updated=datetime.now()
+            last_updated=get_jst_now()
         )
         
         save_dynamic_profile(new_profile)
@@ -936,7 +936,7 @@ JSON形式で返答してください。
             validated_strengths=data.get("validated_strengths", []),
             observed_challenges=data.get("observed_challenges", []),
             estimated_axis_scores=data.get("estimated_axis_scores", {}),
-            last_updated=datetime.now()
+            last_updated=get_jst_now()
         )
         
         save_dynamic_profile(new_profile)
